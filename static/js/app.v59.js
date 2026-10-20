@@ -1433,21 +1433,23 @@ async function handleUpdateOrder(e) {
     const queueDate = document.getElementById('editQueueDate').value;
     const calcDate = document.getElementById('editCalculatedDate').value;
 
-    if (queueDate && isMovingEarlier(queueDate)) {
-        // 往前改：必须校验 queue_date >= 可发货日期
-        if (calcDate && !calcDate.match(/^\d{4}-\d{2}-\d{2}$/) && calcDate !== '计算失败') {
-            showToast('可发货日期：' + calcDate + '，无法保存修改', 'error');
-            return;
-        }
-
-        if (calcDate && calcDate.match(/\d{4}-\d{2}-\d{2}/) && queueDate) {
-            if (new Date(queueDate) < new Date(calcDate)) {
-                showToast('排队日期不能早于可发货日期（' + calcDate + '）', 'error');
-                return;
-            }
-        }
+    // =========== 保存前统一校验（无论往前还是往后改都必须通过） ===========
+    // 1. 排队日期不能为空（没有日期时须先选择）
+    if (!queueDate || !queueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        showToast('请先选择"输入发货日期排队"', 'error');
+        return;
     }
-    // 往后改：跳过前端校验，直接提交
+    // 2. 可发货日期必须是有效日期格式（须先计算出可发货日期，不能是"请联系商务支持"/"计算失败"）
+    if (!calcDate || !calcDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+        showToast('可发货日期无效，请等待计算完成或联系商务支持', 'error');
+        return;
+    }
+    // 3. 排队日期 >= 可发货日期
+    if (new Date(queueDate) < new Date(calcDate)) {
+        showToast('排队日期不能早于可发货日期（' + calcDate + '）', 'error');
+        return;
+    }
+    // ========================================================================
 
     const orderData = {
         model: document.getElementById('editModel').value,
