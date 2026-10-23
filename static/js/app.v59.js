@@ -1432,22 +1432,36 @@ async function handleUpdateOrder(e) {
     const rowIndex = document.getElementById('editRowIndex').value;
     const queueDate = document.getElementById('editQueueDate').value;
     const calcDate = document.getElementById('editCalculatedDate').value;
+    const originalQueueDate = window._editOriginalQueueDate || '';
+    // "原 queueDate 已有有效日期" 标志
+    const originalHasValidQueue = originalQueueDate && originalQueueDate.match(/^\d{4}-\d{2}-\d{2}$/);
 
-    // =========== 保存前统一校验（无论往前还是往后改都必须通过） ===========
-    // 1. 排队日期不能为空（没有日期时须先选择）
-    if (!queueDate || !queueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        showToast('请先选择"输入发货日期排队"', 'error');
-        return;
-    }
-    // 2. 可发货日期必须是有效日期格式（须先计算出可发货日期，不能是"请联系商务支持"/"计算失败"）
-    if (!calcDate || !calcDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
-        showToast('可发货日期无效，请等待计算完成或联系商务支持', 'error');
-        return;
-    }
-    // 3. 排队日期 >= 可发货日期
-    if (new Date(queueDate) < new Date(calcDate)) {
-        showToast('排队日期不能早于可发货日期（' + calcDate + '）', 'error');
-        return;
+    // =========== 分场景校验 ===========
+    // 场景 A：原 queueDate 已有有效日期 AND 新 queueDate 是有效日期 AND 往后改（新 >= 原）
+    //         → 随便改，不算、不校验，直接保存
+    // 场景 B/C：原 queueDate 没有有效日期 或 往前改
+    //         → 必须先算可发货日期，queueDate >= calcDate
+    if (queueDate && queueDate.match(/^\d{4}-\d{2}-\d{2}$/)
+        && originalHasValidQueue
+        && !isMovingEarlier(queueDate)) {
+        // 场景 A：跳过所有校验，直接提交
+    } else {
+        // 场景 B/C：三道校验
+        // 1. 排队日期不能为空（没有日期时须先选择）
+        if (!queueDate || !queueDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            showToast('请先选择"输入发货日期排队"', 'error');
+            return;
+        }
+        // 2. 可发货日期必须是有效日期格式（不能是"请联系商务支持"/"计算失败"）
+        if (!calcDate || !calcDate.match(/^\d{4}-\d{2}-\d{2}$/)) {
+            showToast('可发货日期无效，请等待计算完成或联系商务支持', 'error');
+            return;
+        }
+        // 3. 排队日期 >= 可发货日期
+        if (new Date(queueDate) < new Date(calcDate)) {
+            showToast('排队日期不能早于可发货日期（' + calcDate + '）', 'error');
+            return;
+        }
     }
     // ========================================================================
 
